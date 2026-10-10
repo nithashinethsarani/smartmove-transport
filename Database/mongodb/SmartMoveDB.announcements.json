@@ -1,0 +1,36 @@
+[{
+  "_id": {
+    "$oid": "6ab6693d0dfddaa138dac4db"
+  },
+  "announcement_id": "A002",
+  "title": "Maintenance Notice",
+  "message": "Vehicle V002 will be unavailable due to scheduled maintenance.",
+  "date": "2026-09-16",
+  "priority": "MEDIUM",
+  "status": "ACTIVE",
+  "vehicle_id": "V002"
+},
+{
+  "_id": {
+    "$oid": "6aba052447b1c1b8082149b3"
+  },
+  "announcement_id": "A001",
+  "title": "New Route Opened",
+  "message": "Colombo - Gampaha route is now available daily.",
+  "date": "2026-09-10",
+  "priority": "LOW",
+  "status": "ACTIVE",
+  "vehicle_id": "V004"
+},
+{
+  "_id": {
+    "$oid": "6aba052447b1c1b8082149b4"
+  },
+  "announcement_id": "A003",
+  "title": "Schedule Change",
+  "message": "Colombo - Kandy trip on Oct 5 departs at 6:00 AM sharp.",
+  "date": "2026-09-22",
+  "priority": "MEDIUM",
+  "status": "ACTIVE",
+  "vehicle_id": "V006"
+}]

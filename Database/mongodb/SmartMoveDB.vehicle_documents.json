@@ -1,0 +1,157 @@
+[{
+  "_id": {
+    "$oid": "6ab666d60dfddaa138dac4c6"
+  },
+  "vehicle_id": "V001",
+  "documents": [
+    {
+      "type": "Insurance",
+      "file_name": "V001_Insurance.pdf",
+      "url": "/documents/V001_Insurance.pdf"
+    },
+    {
+      "type": "Revenue License",
+      "file_name": "V001_Revenue_License.pdf",
+      "url": "/documents/V001_Revenue_License.pdf"
+    }
+  ],
+  "images": [
+    {
+      "type": "front",
+      "url": "/images/three_wheeler.svg"
+    },
+    {
+      "type": "side",
+      "url": "/images/three_wheeler.svg"
+    }
+  ]
+},
+{
+  "_id": {
+    "$oid": "6ab666e40dfddaa138dac4c8"
+  },
+  "vehicle_id": "V002",
+  "documents": [
+    {
+      "type": "Insurance",
+      "file_name": "V002_insurance.pdf",
+      "url": "/documents/V002_insurance.pdf"
+    },
+    {
+      "type": "Revenue License",
+      "file_name": "V002_Revenue_License.pdf",
+      "url": "/documents/V002_Revenue_License.pdf"
+    }
+  ],
+  "images": [
+    {
+      "type": "front",
+      "url": "/images/three_wheeler.svg"
+    },
+    {
+      "type": "side",
+      "url": "/images/three_wheeler.svg"
+    }
+  ]
+},
+{
+  "_id": {
+    "$oid": "6ab666ef0dfddaa138dac4ca"
+  },
+  "vehicle_id": "V003",
+  "documents": [
+    {
+      "type": "Insurance",
+      "file_name": "V003_Insurance.pdf",
+      "url": "/documents/V003_Insurance.pdf"
+    },
+    {
+      "type": "Revenue License",
+      "file_name": "V003_Revenue_License.pdf",
+      "url": "/documents/V003_Revenue_License.pdf"
+    }
+  ],
+  "images": [
+    {
+      "type": "front",
+      "url": "/images/van.svg"
+    },
+    {
+      "type": "side",
+      "url": "/images/van.svg"
+    }
+  ]
+},
+{
+  "_id": {
+    "$oid": "6aba053f47b1c1b8082149b5"
+  },
+  "vehicle_id": "V004",
+  "documents": [
+    {
+      "type": "Insurance",
+      "file_name": "V004_insurance.pdf",
+      "url": "/documents/V004_insurance.pdf"
+    },
+    {
+      "type": "Revenue License",
+      "file_name": "V004_license.pdf",
+      "url": "/documents/V004_license.pdf"
+    }
+  ],
+  "images": [
+    {
+      "type": "front",
+      "url": "/images/car.svg"
+    },
+    {
+      "type": "side",
+      "url": "/images/car.svg"
+    }
+  ]
+},
+{
+  "_id": {
+    "$oid": "6aba053f47b1c1b8082149b6"
+  },
+  "vehicle_id": "V007",
+  "documents": [
+    {
+      "type": "Insurance",
+      "file_name": "V007_insurance.pdf",
+      "url": "/documents/V007_insurance.pdf"
+    },
+    {
+      "type": "Revenue License",
+      "file_name": "V007_license.pdf",
+      "url": "/documents/V007_license.pdf"
+    }
+  ],
+  "images": [
+    {
+      "type": "front",
+      "url": "/images/bus.svg"
+    },
+    {
+      "type": "side",
+      "url": "/images/bus.svg"
+    }
+  ]
+},
+{
+  "_id": {
+    "$oid": "6abb5e5675169364921ca93e"
+  },
+  "vehicle_id": "V006",
+  "images": [
+    {
+      "type": "front",
+      "url": "/images/van.svg"
+    },
+    {
+      "type": "side",
+      "url": "/images/van.svg"
+    }
+  ],
+  "documents": []
+}]

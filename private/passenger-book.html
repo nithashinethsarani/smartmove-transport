@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Book a Trip | SmartMove</title>
+  
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="top">
+    <b>🚌 SmartMove</b>
+    <span id="hi"></span>
+    <button onclick="logout()">Logout</button>
+  </div>
+  <div class="wrap">
+    <div class="nav">
+      <a href="/passenger.html">Dashboard</a>
+      <a href="/passenger-book.html" class="on">Book a Trip</a>
+      <a href="/passenger-tickets.html">My Tickets</a>
+      <a href="/passenger-reviews.html">Rate Trips</a>
+    </div>
+
+    <h2>🗓️ Upcoming Trips</h2>
+    <div id="trips"></div>
+
+    <div class="panel" id="booking" style="display:none; margin-top:16px; text-align:center">
+      <h2 id="bTitle"></h2>
+      <p class="sub" id="bInfo"></p>
+      <div class="seats" id="seats"></div>
+      <button class="btn btn-main btn-sm" onclick="confirmBooking()">Confirm booking</button>
+      <button class="btn btn-sm" style="background:#F3EEFC;color:#3B1E6E" onclick="closeBooking()">Close</button>
+      <div class="msg" id="bmsg"></div>
+    </div>
+    <div class="msg" id="msg"></div>
+  </div>
+  <script>
+    let tripList = [], cur = null, selSeats = [];
+    const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const get = async u => (await fetch(u)).json();
+    async function logout() { await fetch('/api/logout', { method: 'POST' }); location = '/'; }
+
+    async function loadTrips() {
+      tripList = await get('/api/trips');
+      trips.innerHTML = tripList.map(x => `<div class="item">
+        <img src="${esc(x.PHOTO)}" style="width:64px;height:auto;border-radius:8px">
+        <span><b>${esc(x.ROUTE_NAME)}</b><br>${esc(x.TRIP_DATE)} · ${esc(x.DEPARTURE_TIME)} · ${esc(x.VEHICLE_TYPE)} · ${esc(x.SEATS_LEFT)} seats left</span>
+        <span><span class="tag">Rs. ${esc(x.PRICE)}</span>
+        ${x.SEATS_LEFT > 0 ? `<button class="btn btn-main btn-sm" onclick="openBooking('${esc(x.TRIP_ID)}')">Book</button>` : '<span class="tag">Full</span>'}</span>
+      </div>`).join('') || '<p class="sub">No upcoming trips</p>';
+    }
+
+    async function openBooking(id) {
+      cur = tripList.find(t => t.TRIP_ID === id); selSeats = [];
+      const d = await get('/api/trips/' + id + '/seats');
+      bTitle.textContent = 'Choose your seat: ' + cur.ROUTE_NAME;
+      bInfo.textContent = cur.TRIP_DATE + ' · ' + cur.DEPARTURE_TIME + ' · Rs. ' + cur.PRICE + ' per seat';
+      bInfo.innerHTML += '<br><span class="seat-note">Tap seats to select more than one</span>';
+      let html = '';
+      for (let i = 0; i < d.capacity; i++) {
+        const label = String.fromCharCode(65 + Math.floor(i / 4)) + '0' + (i % 4 + 1);
+        const taken = d.taken.includes(label);
+        html += `<button class="seat ${taken ? 'taken' : ''}" ${taken ? 'disabled' : ''} onclick="pick(this,'${label}')">${label}</button>`;
+      }
+      seats.innerHTML = html;
+      bmsg.textContent = '';
+      booking.style.display = 'block';
+      booking.scrollIntoView({ behavior: 'smooth' });
+    }
+
+   function pick(btn, label) {
+   const i = selSeats.indexOf(label);
+   if (i === -1) { selSeats.push(label); btn.classList.add('sel'); }
+   else { selSeats.splice(i, 1); btn.classList.remove('sel'); }
+  }
+
+  function closeBooking() { booking.style.display = 'none'; }
+
+
+
+async function confirmBooking() {
+  if (!selSeats.length) { bmsg.className = 'msg'; bmsg.textContent = 'Please choose at least one seat'; return; }
+  const r = await fetch('/api/passenger/book', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tripId: cur.TRIP_ID, seats: selSeats })
+  });
+  const d = await r.json();
+  if (d.ok) {
+    closeBooking();
+    msg.className = 'msg ok'; msg.textContent = d.message;
+    loadTrips();
+  } else {
+    bmsg.className = 'msg'; bmsg.textContent = d.error;
+  }
+}
+
+    (async () => {
+      const me = await get('/api/me'); hi.textContent = 'Hi, ' + me.name + ' 👋';
+      loadTrips();
+    })();
+  </script>
+</body>
+</html>

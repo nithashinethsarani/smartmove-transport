@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Passenger | SmartMove</title>
+  
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="top">
+    <b>🚌 SmartMove</b>
+    <span id="hi"></span>
+    <button onclick="logout()">Logout</button>
+  </div>
+  <div class="wrap">
+    <div class="nav">
+      <a href="/passenger.html" class="on">Dashboard</a>
+      <a href="/passenger-book.html">Book a Trip</a>
+      <a href="/passenger-tickets.html">My Tickets</a>
+      <a href="/passenger-reviews.html">Rate Trips</a>
+    </div>
+
+    <h2 style="margin-bottom:14px">Quick Access</h2>
+    <div class="icon-grid">
+      <a class="icon-card" href="/passenger-book.html"><span class="ic">🎟️</span>Book a Trip</a>
+      <a class="icon-card" href="/passenger-tickets.html"><span class="ic">🎫</span>My Tickets</a>
+      <a class="icon-card" href="/passenger-reviews.html"><span class="ic">⭐</span>Rate Trips</a>
+      
+    </div>
+    <hr style="border:none;border-top:2px solid #e4dbf5;margin:26px 0">
+
+    <h2>📢 Announcements</h2>
+    <div id="ann"></div>
+  </div>
+  <script>
+    const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    async function logout() { await fetch('/api/logout', { method: 'POST' }); location = '/'; }
+    (async () => {
+      const me = await (await fetch('/api/me')).json();
+      hi.textContent = 'Hi, ' + me.name + ' 👋';
+      const a = await (await fetch('/api/announcements')).json();
+      ann.innerHTML = a.map(x => `<div class="item"><span><b>${esc(x.title)}</b><br>${esc(x.message)}</span><span class="tag">${esc(x.date)}</span></div>`).join('') || '<p class="sub">No announcements</p>';
+    })();
+  </script>
+</body>
+</html>

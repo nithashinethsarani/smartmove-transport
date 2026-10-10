@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vehicles | SmartMove Admin</title>
+  
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="top">
+    <b>🛠️ SmartMove Admin</b>
+    <button onclick="logout()">Logout</button>
+  </div>
+  <div class="wrap">
+    <div class="nav">
+      <a href="/admin.html" class="on">Dashboard</a>
+      <a href="/admin-vehicles.html">Vehicles</a>
+      <a href="/admin-drivers.html">Drivers</a>
+      <a href="/admin-routes.html">Routes</a>
+      <a href="/admin-trips.html">Trips</a>
+      <a href="/admin-maintenance.html">Maintenance</a>
+      <a href="/admin-tickets.html">Tickets</a>
+      <a href="/admin-reports.html">Reports</a>
+      <a href="/admin-insights.html">Customer Insights</a>
+    </div>
+
+    <div class="panel">
+      <h2 id="formTitle">Add Vehicle</h2>
+      <div class="row">
+        <input id="num" placeholder="Vehicle number (e.g. CAB-9999)">
+        <select id="type">
+          <option>Three-Wheeler</option><option>Car</option><option>Van</option><option>Bus</option>
+        </select>
+        <input id="model" placeholder="Model">
+        <input id="cap" type="number" min="1" placeholder="Capacity">
+        <select id="vstatus">
+          <option>Available</option><option>In Service</option><option>Maintenance</option>
+        </select>
+      </div>
+      <button class="btn btn-main btn-sm" onclick="save()">Save</button>
+      <button class="btn btn-sm" style="background:#F3EEFC;color:#3B1E6E" onclick="resetForm()">Clear</button>
+      <div class="msg" id="msg"></div>
+    </div>
+
+    <div class="panel scroll">
+      <table>
+        <thead><tr><th>ID</th><th>Number</th><th>Type</th><th>Model</th><th>Seats</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let editId = null, list = [];
+    const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+    async function logout() { await fetch('/api/logout', { method: 'POST' }); location = '/'; }
+
+    async function load() {
+      list = await (await fetch('/api/admin/vehicles')).json();
+      rows.innerHTML = list.map(v => `<tr>
+        <td>${esc(v.VEHICLE_ID)}</td><td>${esc(v.VEHICLE_NUMBER)}</td><td>${esc(v.VEHICLE_TYPE)}</td>
+        <td>${esc(v.MODEL)}</td><td>${esc(v.CAPACITY)}</td><td><span class="tag">${esc(v.STATUS)}</span></td>
+        <td><button class="act edit" onclick="edit('${esc(v.VEHICLE_ID)}')">Edit</button>
+            <button class="act del" onclick="del('${esc(v.VEHICLE_ID)}')">Delete</button></td></tr>`).join('');
+    }
+
+    function resetForm() {type.value = 'Three-Wheeler'; vstatus.value = 'Available';
+      editId = null; formTitle.textContent = 'Add Vehicle';
+      num.value = model.value = cap.value = ''; 
+    }
+
+    function edit(id) {
+      const v = list.find(x => x.VEHICLE_ID === id);
+      editId = id; formTitle.textContent = 'Edit Vehicle ' + id;
+      num.value = v.VEHICLE_NUMBER; type.value = v.VEHICLE_TYPE; model.value = v.MODEL;
+      cap.value = v.CAPACITY; vstatus.value = v.STATUS;
+      scrollTo(0, 0);
+    }
+
+    async function save() {
+      const body = { vehicleNumber: num.value.trim(), type: type.value, model: model.value.trim(), capacity: cap.value, status: vstatus.value };
+      const r = await fetch(editId ? '/api/admin/vehicles/' + editId : '/api/admin/vehicles', {
+        method: editId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const d = await r.json();
+      msg.className = 'msg' + (d.ok ? ' ok' : '');
+      msg.textContent = d.error || d.message;
+      if (d.ok) { resetForm(); load(); }
+    }
+
+    async function del(id) {
+      if (!confirm('Delete vehicle ' + id + '?')) return;
+      const d = await (await fetch('/api/admin/vehicles/' + id, { method: 'DELETE' })).json();
+      msg.className = 'msg' + (d.ok ? ' ok' : '');
+      msg.textContent = d.error || d.message;
+      load();
+    }
+
+    load();
+  </script>
+</body>
+</html>

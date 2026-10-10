@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Tickets | SmartMove</title>
+  
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="top">
+    <b>🚌 SmartMove</b>
+    <span id="hi"></span>
+    <button onclick="logout()">Logout</button>
+  </div>
+  <div class="wrap">
+    <div class="nav">
+      <a href="/passenger.html">Dashboard</a>
+      <a href="/passenger-book.html">Book a Trip</a>
+      <a href="/passenger-tickets.html" class="on">My Tickets</a>
+      <a href="/passenger-reviews.html">Rate Trips</a>
+    </div>
+
+    <h2>🎫 My Tickets</h2>
+    <div class="panel scroll">
+      <table>
+        <thead><tr><th>Ticket</th><th>Route</th><th>Date</th><th>Seat</th><th>Price</th><th>Ticket</th><th>Payment</th></tr></thead>
+        <tbody id="tickets"></tbody>
+      </table>
+    </div>
+  </div>
+  <script>
+    const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const get = async u => (await fetch(u)).json();
+    async function logout() { await fetch('/api/logout', { method: 'POST' }); location = '/'; }
+    (async () => {
+      const me = await get('/api/me'); hi.textContent = 'Hi, ' + me.name + ' 👋';
+      const t = await get('/api/passenger/tickets');
+      tickets.innerHTML = t.map(x => `<tr>
+        <td>${esc(x.TICKET_ID)}</td><td>${esc(x.ROUTE_NAME)}</td><td>${esc(x.TRIP_DATE)} ${esc(x.DEPARTURE_TIME)}</td>
+        <td>${esc(x.SEAT_NUMBER)}</td><td>Rs. ${esc(x.TICKET_PRICE)}</td>
+        <td><span class="tag">${esc(x.TICKET_STATUS)}</span></td><td><span class="tag">${esc(x.PAYMENT_STATUS || '-')}</span></td></tr>`).join('')
+        || '<tr><td colspan="7" class="sub">No tickets yet</td></tr>';
+    })();
+  </script>
+</body>
+</html>

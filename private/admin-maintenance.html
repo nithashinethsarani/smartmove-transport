@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Maintenance | SmartMove Admin</title>
+  
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="top">
+    <b>🛠️ SmartMove Admin</b>
+    <button onclick="logout()">Logout</button>
+  </div>
+  <div class="wrap">
+   <div class="nav">
+      <a href="/admin.html" class="on">Dashboard</a>
+      <a href="/admin-vehicles.html">Vehicles</a>
+      <a href="/admin-drivers.html">Drivers</a>
+      <a href="/admin-routes.html">Routes</a>
+      <a href="/admin-trips.html">Trips</a>
+      <a href="/admin-maintenance.html">Maintenance</a>
+      <a href="/admin-tickets.html">Tickets</a>
+      <a href="/admin-reports.html">Reports</a>
+      <a href="/admin-insights.html">Customer Insights</a>
+    </div>
+
+    <div class="panel">
+      <h2 id="formTitle">Add Maintenance Record</h2>
+      <div class="row">
+        <select id="mveh"></select>
+        <input id="mdate" type="date">
+        <select id="mtype"><option>Service</option><option>Repair</option><option>Inspection</option></select>
+        <input id="mdesc" placeholder="Description" maxlength="100">
+        <input id="mcost" type="number" min="0" placeholder="Cost (Rs.)">
+        <select id="mstatus"><option>Scheduled</option><option>In Progress</option><option>Completed</option></select>
+      </div>
+      <button class="btn btn-main btn-sm" onclick="save()">Save</button>
+      <button class="btn btn-sm" style="background:#F3EEFC;color:#3B1E6E" onclick="resetForm()">Clear</button>
+      <div class="msg" id="msg"></div>
+    </div>
+
+    <div class="panel scroll">
+      <table>
+        <thead><tr><th>ID</th><th>Vehicle</th><th>Date</th><th>Type</th><th>Description</th><th>Cost</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let editId = null, list = [];
+    const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const get = async u => (await fetch(u)).json();
+
+    async function logout() { await fetch('/api/logout', { method: 'POST' }); location = '/'; }
+
+    async function loadOptions() {
+      const v = await get('/api/admin/vehicles');
+      mveh.innerHTML = '<option value="">Select vehicle</option>' + v.map(x =>
+        `<option value="${esc(x.VEHICLE_ID)}">${esc(x.VEHICLE_ID)} · ${esc(x.VEHICLE_NUMBER)}</option>`).join('');
+    }
+
+    async function load() {
+      list = await get('/api/admin/maintenance');
+      rows.innerHTML = list.map(m => `<tr>
+        <td>${esc(m.MAINTENANCE_ID)}</td><td>${esc(m.VEHICLE_ID)} · ${esc(m.VEHICLE_NUMBER)}</td><td>${esc(m.MDATE)}</td>
+        <td>${esc(m.MAINTENANCE_TYPE)}</td><td>${esc(m.DESCRIPTION)}</td><td>Rs. ${esc(m.COST)}</td>
+        <td><span class="tag">${esc(m.STATUS)}</span></td>
+        <td><button class="act edit" onclick="edit('${esc(m.MAINTENANCE_ID)}')">Edit</button>
+            <button class="act del" onclick="del('${esc(m.MAINTENANCE_ID)}')">Delete</button></td></tr>`).join('');
+    }
+
+    function resetForm() {
+      editId = null; formTitle.textContent = 'Add Maintenance Record';
+      mveh.value = mdate.value = mdesc.value = mcost.value = ''; mtype.value = 'Service'; mstatus.value = 'Scheduled';
+    }
+
+    function edit(id) {
+      const m = list.find(x => x.MAINTENANCE_ID === id);
+      editId = id; formTitle.textContent = 'Edit Record ' + id;
+      mveh.value = m.VEHICLE_ID; mdate.value = m.MDATE; mtype.value = m.MAINTENANCE_TYPE;
+      mdesc.value = m.DESCRIPTION; mcost.value = m.COST; mstatus.value = m.STATUS;
+      scrollTo(0, 0);
+    }
+
+    async function save() {
+      const body = { vehicleId: mveh.value, date: mdate.value, type: mtype.value,
+                     description: mdesc.value.trim(), cost: mcost.value, status: mstatus.value };
+      const r = await fetch(editId ? '/api/admin/maintenance/' + editId : '/api/admin/maintenance', {
+        method: editId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const d = await r.json();
+      msg.className = 'msg' + (d.ok ? ' ok' : '');
+      msg.textContent = d.error || d.message;
+      if (d.ok) { resetForm(); load(); }
+    }
+
+    async function del(id) {
+      if (!confirm('Delete record ' + id + '?')) return;
+      const d = await (await fetch('/api/admin/maintenance/' + id, { method: 'DELETE' })).json();
+      msg.className = 'msg' + (d.ok ? ' ok' : '');
+      msg.textContent = d.error || d.message;
+      load();
+    }
+
+    loadOptions().then(load);
+  </script>
+</body>
+</html>

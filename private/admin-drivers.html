@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Drivers | SmartMove Admin</title>
+  
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="top">
+    <b>🛠️ SmartMove Admin</b>
+    <button onclick="logout()">Logout</button>
+  </div>
+  <div class="wrap">
+   <div class="nav">
+      <a href="/admin.html" class="on">Dashboard</a>
+      <a href="/admin-vehicles.html">Vehicles</a>
+      <a href="/admin-drivers.html">Drivers</a>
+      <a href="/admin-routes.html">Routes</a>
+      <a href="/admin-trips.html">Trips</a>
+      <a href="/admin-maintenance.html">Maintenance</a>
+      <a href="/admin-tickets.html">Tickets</a>
+      <a href="/admin-reports.html">Reports</a>
+      <a href="/admin-insights.html">Customer Insights</a>
+    </div>
+
+    <div class="panel">
+      <h2 id="formTitle">Add Driver</h2>
+      <div class="row">
+        <input id="dfn" placeholder="First name">
+        <input id="dln" placeholder="Last name">
+        <input id="dlic" placeholder="License number">
+        <input id="dph" placeholder="Phone (10 digits)">
+        <input id="dem" type="email" placeholder="Email">
+        <select id="dstatus">
+          <option>Available</option><option>On Trip</option><option>On Leave</option>
+        </select>
+      </div>
+      <button class="btn btn-main btn-sm" onclick="save()">Save</button>
+      <button class="btn btn-sm" style="background:#F3EEFC;color:#3B1E6E" onclick="resetForm()">Clear</button>
+      <div class="msg" id="msg"></div>
+    </div>
+
+    <div class="panel scroll">
+      <table>
+        <thead><tr><th>ID</th><th>Name</th><th>License</th><th>Phone</th><th>Email</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let editId = null, list = [];
+    const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+    async function logout() { await fetch('/api/logout', { method: 'POST' }); location = '/'; }
+
+    async function load() {
+      list = await (await fetch('/api/admin/drivers')).json();
+      rows.innerHTML = list.map(d => `<tr>
+        <td>${esc(d.DRIVER_ID)}</td><td>${esc(d.FIRST_NAME)} ${esc(d.LAST_NAME)}</td>
+        <td>${esc(d.LICENSE_NUMBER)}</td><td>${esc(d.PHONE)}</td><td>${esc(d.EMAIL)}</td>
+        <td><span class="tag">${esc(d.STATUS)}</span></td>
+        <td><button class="act edit" onclick="edit('${esc(d.DRIVER_ID)}')">Edit</button>
+            <button class="act del" onclick="del('${esc(d.DRIVER_ID)}')">Delete</button></td></tr>`).join('');
+    }
+
+    function resetForm() {
+      editId = null; formTitle.textContent = 'Add Driver';
+      dfn.value = dln.value = dlic.value = dph.value = dem.value = ''; dstatus.value = 'Available';
+    }
+
+    function edit(id) {
+      const d = list.find(x => x.DRIVER_ID === id);
+      editId = id; formTitle.textContent = 'Edit Driver ' + id;
+      dfn.value = d.FIRST_NAME; dln.value = d.LAST_NAME; dlic.value = d.LICENSE_NUMBER;
+      dph.value = d.PHONE; dem.value = d.EMAIL || '';
+      dstatus.value = d.STATUS || 'Available';
+      scrollTo(0, 0);
+    }
+
+    async function save() {
+      const body = { firstName: dfn.value.trim(), lastName: dln.value.trim(), license: dlic.value.trim(),
+                     phone: dph.value.trim(), email: dem.value.trim(), status: dstatus.value };
+      const r = await fetch(editId ? '/api/admin/drivers/' + editId : '/api/admin/drivers', {
+        method: editId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const d = await r.json();
+      msg.className = 'msg' + (d.ok ? ' ok' : '');
+      msg.textContent = d.error || d.message;
+      if (d.ok) { resetForm(); load(); }
+    }
+
+    async function del(id) {
+      if (!confirm('Delete driver ' + id + '?')) return;
+      const d = await (await fetch('/api/admin/drivers/' + id, { method: 'DELETE' })).json();
+      msg.className = 'msg' + (d.ok ? ' ok' : '');
+      msg.textContent = d.error || d.message;
+      load();
+    }
+
+    load();
+  </script>
+</body>
+</html>

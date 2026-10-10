@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rate Trips | SmartMove</title>
+  
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="top">
+    <b>🚌 SmartMove</b>
+    <span id="hi"></span>
+    <button onclick="logout()">Logout</button>
+  </div>
+  <div class="wrap">
+    <div class="nav">
+      <a href="/passenger.html">Dashboard</a>
+      <a href="/passenger-book.html">Book a Trip</a>
+      <a href="/passenger-tickets.html">My Tickets</a>
+      <a href="/passenger-reviews.html" class="on">Rate Trips</a>
+    </div>
+
+    <h2>⭐ Rate Your Trips</h2>
+    <div id="reviewList"></div>
+    <div class="msg" id="msg"></div>
+  </div>
+  <script>
+    const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const get = async u => (await fetch(u)).json();
+    async function logout() { await fetch('/api/logout', { method: 'POST' }); location = '/'; }
+
+    async function loadReviewable() {
+      const t = await get('/api/passenger/reviewable');
+      reviewList.innerHTML = t.length ? t.map(x => `<div class="item" style="flex-wrap:wrap">
+        <span><b>${esc(x.ROUTE_NAME)}</b><br>${esc(x.TRIP_DATE)}</span>
+        <span style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <select id="rt_${esc(x.TRIP_ID)}" style="padding:10px;border-radius:10px;border:2px solid #e4dbf5">
+            <option value="5">⭐⭐⭐⭐⭐ (5)</option><option value="4">⭐⭐⭐⭐ (4)</option>
+            <option value="3">⭐⭐⭐ (3)</option><option value="2">⭐⭐ (2)</option><option value="1">⭐ (1)</option>
+          </select>
+          <input id="cm_${esc(x.TRIP_ID)}" placeholder="Your comment" maxlength="200" style="margin-top:0;width:240px">
+          <button class="btn btn-main btn-sm" style="margin-top:0" onclick="sendReview('${esc(x.TRIP_ID)}')">Submit</button>
+        </span></div>`).join('')
+        : '<p class="sub">No completed trips waiting for your review</p>';
+    }
+
+    async function sendReview(id) {
+      const r = await fetch('/api/passenger/feedback', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tripId: id, rating: document.getElementById('rt_' + id).value,
+                               comment: document.getElementById('cm_' + id).value })
+      });
+      const d = await r.json();
+      msg.className = 'msg' + (d.ok ? ' ok' : '');
+      msg.textContent = d.error || d.message;
+      if (d.ok) loadReviewable();
+    }
+
+    (async () => {
+      const me = await get('/api/me'); hi.textContent = 'Hi, ' + me.name + ' 👋';
+      loadReviewable();
+    })();
+  </script>
+</body>
+</html>

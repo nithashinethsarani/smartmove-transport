@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin | SmartMove</title>
+  
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="top">
+    <b>🛠️ SmartMove Admin</b>
+    <button onclick="logout()">Logout</button>
+  </div>
+  <div class="wrap">
+   <div class="nav">
+      <a href="/admin.html" class="on">Dashboard</a>
+      <a href="/admin-vehicles.html">Vehicles</a>
+      <a href="/admin-drivers.html">Drivers</a>
+      <a href="/admin-routes.html">Routes</a>
+      <a href="/admin-trips.html">Trips</a>
+      <a href="/admin-maintenance.html">Maintenance</a>
+      <a href="/admin-tickets.html">Tickets</a>
+      <a href="/admin-reports.html">Reports</a>
+      <a href="/admin-insights.html">Customer Insights</a>
+    </div>
+    <h2>Dashboard</h2>
+    <div class="grid" id="stats"></div>
+    <h2 style="margin-top:28px">Quick Access</h2>
+    <div class="icon-grid">
+      <a class="icon-card" href="/admin-vehicles.html"><span class="ic">🚐</span>Vehicles</a>
+      <a class="icon-card" href="/admin-drivers.html"><span class="ic">👨‍✈️</span>Drivers</a>
+      <a class="icon-card" href="/admin-routes.html"><span class="ic">🛣️</span>Routes</a>
+      <a class="icon-card" href="/admin-trips.html"><span class="ic">🗓️</span>Trips</a>
+      <a class="icon-card" href="/admin-maintenance.html"><span class="ic">🔧</span>Maintenance</a>
+      <a class="icon-card" href="/admin-tickets.html"><span class="ic">🎫</span>Tickets</a>
+      <a class="icon-card" href="/admin-reports.html"><span class="ic">📑</span>Reports</a>
+      <a class="icon-card" href="/admin-insights.html"><span class="ic">🍃</span>Customer Insights</a>
+    </div>
+  </div>
+  <script>
+    async function logout() {
+      await fetch('/api/logout', { method: 'POST' });
+      location = '/';
+    }
+    (async () => {
+      const s = await (await fetch('/api/admin/stats')).json();
+      stats.innerHTML = [
+        ['🚐 Vehicles', s.VEHICLES],
+        ['👨‍✈️ Drivers', s.DRIVERS],
+        ['🗓️ Trips', s.TRIPS],
+        ['💰 Revenue (Rs.)', s.REVENUE]
+      ].map(([k, v]) => `<div class="stat">${k}<b>${v}</b></div>`).join('');
+    })();
+  </script>
+</body>
+</html>

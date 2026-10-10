@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trips | SmartMove Admin</title>
+  
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="top">
+    <b>🛠️ SmartMove Admin</b>
+    <button onclick="logout()">Logout</button>
+  </div>
+  <div class="wrap">
+    <div class="nav">
+      <a href="/admin.html" class="on">Dashboard</a>
+      <a href="/admin-vehicles.html">Vehicles</a>
+      <a href="/admin-drivers.html">Drivers</a>
+      <a href="/admin-routes.html">Routes</a>
+      <a href="/admin-trips.html">Trips</a>
+      <a href="/admin-maintenance.html">Maintenance</a>
+      <a href="/admin-tickets.html">Tickets</a>
+      <a href="/admin-reports.html">Reports</a>
+      <a href="/admin-insights.html">Customer Insights</a>
+    </div>
+
+    <div class="panel">
+      <h2 id="formTitle">Schedule Trip</h2>
+      <div class="row">
+        <select id="tveh"></select>
+        <select id="tdrv"></select>
+        <select id="trt"></select>
+        <input id="tdate" type="date">
+        <input id="tdep" type="time" title="Departure time">
+        <input id="tarr" type="time" title="Arrival time">
+        <input id="tprice" type="number" min="1" placeholder="Price (Rs.)">
+        <select id="tstatus">
+          <option>Scheduled</option><option>In Progress</option><option>Completed</option><option>Cancelled</option>
+        </select>
+      </div>
+      <button class="btn btn-main btn-sm" onclick="save()">Save</button>
+      <button class="btn btn-sm" style="background:#F3EEFC;color:#3B1E6E" onclick="resetForm()">Clear</button>
+      <div class="msg" id="msg"></div>
+    </div>
+
+    <div class="panel scroll">
+      <table>
+        <thead><tr><th>ID</th><th>Route</th><th>Date</th><th>Time</th><th>Vehicle</th><th>Driver</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let editId = null, list = [];
+    const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const get = async u => (await fetch(u)).json();
+
+    async function logout() { await fetch('/api/logout', { method: 'POST' }); location = '/'; }
+
+    async function loadOptions() {
+      const [v, d, r] = await Promise.all([get('/api/admin/vehicles'), get('/api/admin/drivers'), get('/api/admin/routes')]);
+      tveh.innerHTML = '<option value="">Select vehicle</option>' + v.map(x =>
+        `<option value="${esc(x.VEHICLE_ID)}">${esc(x.VEHICLE_ID)} · ${esc(x.VEHICLE_NUMBER)} (${esc(x.VEHICLE_TYPE)}, ${esc(x.CAPACITY)} seats)</option>`).join('');
+      tdrv.innerHTML = '<option value="">Select driver</option>' + d.map(x =>
+        `<option value="${esc(x.DRIVER_ID)}">${esc(x.DRIVER_ID)} · ${esc(x.FIRST_NAME)} ${esc(x.LAST_NAME)}</option>`).join('');
+      trt.innerHTML = '<option value="">Select route</option>' + r.map(x =>
+        `<option value="${esc(x.ROUTE_ID)}">${esc(x.ROUTE_ID)} · ${esc(x.ROUTE_NAME)}</option>`).join('');
+    }
+
+    async function load() {
+      list = await get('/api/admin/trips');
+      rows.innerHTML = list.map(t => `<tr>
+        <td>${esc(t.TRIP_ID)}</td><td>${esc(t.ROUTE_NAME)}</td><td>${esc(t.TRIP_DATE)}</td>
+        <td>${esc(t.DEPARTURE_TIME)} - ${esc(t.ARRIVAL_TIME)}</td>
+        <td>${esc(t.VEHICLE_NUMBER)}</td><td>${esc(t.DRIVER_NAME)}</td><td>Rs. ${esc(t.PRICE)}</td>
+        <td><span class="tag">${esc(t.STATUS)}</span></td>
+        <td><button class="act edit" onclick="edit('${esc(t.TRIP_ID)}')">Edit</button>
+            <button class="act del" onclick="del('${esc(t.TRIP_ID)}')">Delete</button></td></tr>`).join('');
+    }
+
+    function resetForm() {
+      editId = null; formTitle.textContent = 'Schedule Trip';
+      tveh.value = tdrv.value = trt.value = tdate.value = tdep.value = tarr.value = tprice.value = '';
+      tstatus.value = 'Scheduled';
+    }
+
+    function edit(id) {
+      const t = list.find(x => x.TRIP_ID === id);
+      editId = id; formTitle.textContent = 'Edit Trip ' + id;
+      tveh.value = t.VEHICLE_ID; tdrv.value = t.DRIVER_ID; trt.value = t.ROUTE_ID;
+      tdate.value = t.TRIP_DATE; tdep.value = t.DEPARTURE_TIME; tarr.value = t.ARRIVAL_TIME;
+      tprice.value = t.PRICE; tstatus.value = t.STATUS;
+      scrollTo(0, 0);
+    }
+
+    async function save() {
+      const body = { vehicleId: tveh.value, driverId: tdrv.value, routeId: trt.value, date: tdate.value,
+                     departure: tdep.value, arrival: tarr.value, price: tprice.value, status: tstatus.value };
+      const r = await fetch(editId ? '/api/admin/trips/' + editId : '/api/admin/trips', {
+        method: editId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const d = await r.json();
+      msg.className = 'msg' + (d.ok ? ' ok' : '');
+      msg.textContent = d.error || d.message;
+      if (d.ok) { resetForm(); load(); }
+    }
+
+    async function del(id) {
+      if (!confirm('Delete trip ' + id + '?')) return;
+      const d = await (await fetch('/api/admin/trips/' + id, { method: 'DELETE' })).json();
+      msg.className = 'msg' + (d.ok ? ' ok' : '');
+      msg.textContent = d.error || d.message;
+      load();
+    }
+
+    loadOptions().then(load);
+  </script>
+</body>
+</html>

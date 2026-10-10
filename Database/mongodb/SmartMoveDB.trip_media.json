@@ -1,0 +1,62 @@
+[{
+  "_id": {
+    "$oid": "6ab669e90dfddaa138dac4de"
+  },
+  "trip_id": "T001",
+  "media": [
+    {
+      "type": "image",
+      "file_name": "T001_bus.jpg",
+      "url": "/media/T001_bus.jpg"
+    },
+    {
+      "type": "video",
+      "file_name": "T001_trip.mp4",
+      "url": "/media/T001_trip.mp4"
+    }
+  ]
+},
+{
+  "_id": {
+    "$oid": "6ab669f50dfddaa138dac4e0"
+  },
+  "trip_id": "T002",
+  "media": [
+    {
+      "type": "image",
+      "file_name": "T002_bus.jpg",
+      "url": "/media/T002_bus.jpg"
+    }
+  ]
+},
+{
+  "_id": {
+    "$oid": "6aba053f47b1c1b8082149b7"
+  },
+  "trip_id": "T009",
+  "media": [
+    {
+      "type": "image",
+      "file_name": "T009_bus.jpg",
+      "url": "/media/T009_bus.jpg"
+    },
+    {
+      "type": "video",
+      "file_name": "T009_trip.mp4",
+      "url": "/media/T009_trip.mp4"
+    }
+  ]
+},
+{
+  "_id": {
+    "$oid": "6aba053f47b1c1b8082149b8"
+  },
+  "trip_id": "T010",
+  "media": [
+    {
+      "type": "image",
+      "file_name": "T010_van.jpg",
+      "url": "/media/T010_van.jpg"
+    }
+  ]
+}]

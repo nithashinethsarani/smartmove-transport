@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mongo Insights | SmartMove Admin</title>
+  
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="top">
+    <b>🛠️ SmartMove Admin</b>
+    <button onclick="logout()">Logout</button>
+  </div>
+  <div class="wrap">
+    <div class="nav">
+      <a href="/admin.html" class="on">Dashboard</a>
+      <a href="/admin-vehicles.html">Vehicles</a>
+      <a href="/admin-drivers.html">Drivers</a>
+      <a href="/admin-routes.html">Routes</a>
+      <a href="/admin-trips.html">Trips</a>
+      <a href="/admin-maintenance.html">Maintenance</a>
+      <a href="/admin-tickets.html">Tickets</a>
+      <a href="/admin-reports.html">Reports</a>
+      <a href="/admin-insights.html">Customer Insights</a>
+    </div>
+
+    <div class="panel">
+      <h2>1. Reviews for a route</h2>
+      <div class="row">
+        <select id="routeSel"></select>
+        <button class="btn btn-main btn-sm" style="margin-top:0" onclick="q1()">Search</button>
+      </div>
+      <div id="out1"></div>
+    </div>
+
+    <div class="panel">
+      <h2>2. Highest-rated vehicles / drivers</h2>
+      <div class="row">
+        <select id="topBy"><option value="vehicle">By Vehicle</option><option value="driver">By Driver</option></select>
+        <button class="btn btn-main btn-sm" style="margin-top:0" onclick="q2()">Show</button>
+      </div>
+      <div id="out2"></div>
+    </div>
+
+    <div class="panel">
+      <h2>3. Search complaints / feedback by keyword</h2>
+      <div class="row">
+        <input id="kw" placeholder="e.g. late, crowded, air conditioning">
+        <button class="btn btn-main btn-sm" style="margin-top:0" onclick="q3()">Search</button>
+      </div>
+      <div id="out3"></div>
+    </div>
+
+   <div class="panel">
+      <h2>4. Vehicle documents & images</h2>
+      <div class="row">
+        <select id="vehSel"></select>
+        <button class="btn btn-main btn-sm" style="margin-top:0" onclick="q4()">Show</button>
+      </div>
+
+      <h2 style="font-size:16px;margin-top:18px">Update vehicle photo</h2>
+      <div class="row">
+        <select id="iconType"><option>Car</option><option>Van</option><option>Bus</option><option>Three-Wheeler</option></select>
+        <button class="btn btn-main btn-sm" style="margin-top:0" onclick="saveImage()">Save Photo</button>
+      </div>
+
+      <h2 style="font-size:16px;margin-top:18px">Add / Replace a document</h2>
+   <div class="row">
+        <select id="docType"><option>Insurance</option><option>Revenue License</option></select>
+        <input id="docFile" type="file" accept="application/pdf" style="padding:8px">
+        <button class="btn btn-main btn-sm" style="margin-top:0" onclick="saveDoc()">Upload PDF</button>
+      </div>
+      <div class="msg" id="msg4"></div>
+
+      <div id="out4" style="margin-top:14px"></div>
+    </div>
+
+  <script>
+    const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const get = async u => { const r = await fetch(u); return { ok: r.ok, data: await r.json() }; };
+    async function logout() { await fetch('/api/logout', { method: 'POST' }); location = '/'; }
+
+    async function loadOptions() {
+      const routes = await (await fetch('/api/admin/routes')).json();
+      routeSel.innerHTML = routes.map(r => `<option value="${esc(r.ROUTE_ID)}">${esc(r.ROUTE_ID)} · ${esc(r.ROUTE_NAME)}</option>`).join('');
+      const vehicles = await (await fetch('/api/admin/vehicles')).json();
+      vehSel.innerHTML = vehicles.map(v => `<option value="${esc(v.VEHICLE_ID)}">${esc(v.VEHICLE_ID)} · ${esc(v.VEHICLE_NUMBER)}</option>`).join('');
+    }
+
+    function reviewRow(x) {
+      return `<div class="item"><span>⭐ ${esc(x.rating)} — ${esc(x.comment)}<br>
+        <small>${esc(x.trip_id)} · vehicle ${esc(x.vehicle_id)} · driver ${esc(x.driver_id)} · ${esc(x.date)}</small></span>
+        ${x.complaint ? '<span class="tag" style="background:#fde2e2;color:#c0392b">complaint</span>' : ''}</div>`;
+    }
+
+    async function q1() {
+      const { ok, data } = await get('/api/admin/mongo/route-reviews?routeId=' + routeSel.value);
+      out1.innerHTML = ok ? (data.length ? data.map(reviewRow).join('') : '<p class="sub">No reviews for this route</p>')
+                          : `<p class="msg">${esc(data.error)}</p>`;
+    }
+
+    async function q2() {
+      const { ok, data } = await get('/api/admin/mongo/top-rated?by=' + topBy.value);
+      out2.innerHTML = ok ? data.map(x => `<div class="item"><span><b>${esc(x.id)}</b></span>
+        <span class="tag">⭐ ${esc(x.avgRating)} avg · ${esc(x.reviews)} reviews</span></div>`).join('')
+        : `<p class="msg">${esc(data.error)}</p>`;
+    }
+
+    async function q3() {
+      const { ok, data } = await get('/api/admin/mongo/search?kw=' + encodeURIComponent(kw.value));
+      out3.innerHTML = ok ? (data.length ? data.map(reviewRow).join('') : '<p class="sub">No matches</p>')
+                          : `<p class="msg">${esc(data.error)}</p>`;
+    }
+
+        async function q4() {
+      const { ok, data } = await get('/api/admin/mongo/vehicle-docs?vehicleId=' + vehSel.value);
+      if (!ok) { out4.innerHTML = `<p class="msg">${esc(data.error)}</p>`; return; }
+    const docs = (data.documents || []).map(d => `<div class="item doc-card">
+        <span class="doc-icon pdf">📄</span>
+        <span style="flex:1"><b>${esc(d.type)}</b><br><small>${esc(d.file_name)}</small></span>
+        <a class="act edit" href="${esc(d.url)}" target="_blank" style="text-decoration:none">View</a>
+        <button class="act del" onclick="delDoc('${esc(d.type)}','${esc(d.file_name)}')">Remove</button></div>`).join('');
+      const imgs = (data.images || []).slice(0, 1).map(i => `<div class="item" style="align-items:center">
+        <span>🖼️ Vehicle photo</span>
+        <img src="${esc(i.url)}" alt="vehicle" style="width:140px;height:auto;border-radius:10px;border:2px solid #e4dbf5"></div>`).join('');
+      out4.innerHTML = (docs || imgs) ? docs + imgs : '<p class="sub">No documents on file for this vehicle</p>';
+    }
+
+    async function saveImage() {
+      const r = await fetch('/api/admin/mongo/vehicle-image', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vehicleId: vehSel.value, iconType: iconType.value })
+      });
+      const d = await r.json();
+      msg4.className = 'msg' + (d.ok ? ' ok' : '');
+      msg4.textContent = d.error || d.message;
+      if (d.ok) q4();
+    }
+
+        async function saveDoc() {
+      const file = docFile.files[0];
+      if (!file) { msg4.className = 'msg'; msg4.textContent = 'Choose a PDF file'; return; }
+      const fd = new FormData();
+      fd.append('vehicleId', vehSel.value);
+      fd.append('docType', docType.value);
+      fd.append('file', file);
+      const r = await fetch('/api/admin/mongo/vehicle-doc', { method: 'POST', body: fd });
+      const d = await r.json();
+      msg4.className = 'msg' + (d.ok ? ' ok' : '');
+      msg4.textContent = d.error || d.message;
+      if (d.ok) { docFile.value = ''; q4(); }
+    }
+
+  async function delDoc(type, fileName) {
+      if (!confirm('Remove ' + type + ' for ' + vehSel.value + '?')) return;
+      const r = await fetch('/api/admin/mongo/vehicle-doc', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vehicleId: vehSel.value, docType: type, fileName })
+      });
+      const d = await r.json();
+      msg4.className = 'msg' + (d.ok ? ' ok' : '');
+      msg4.textContent = d.error || d.message;
+      q4();
+    }
+
+    loadOptions();
+  </script>
+</body>
+</html>

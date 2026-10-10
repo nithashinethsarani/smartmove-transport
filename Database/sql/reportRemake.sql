@@ -1,0 +1,184 @@
+-- Report 1: Most frequently used routes
+CREATE OR REPLACE PROCEDURE sp_rpt_popular_routes (p_cur OUT SYS_REFCURSOR) AS
+BEGIN
+    OPEN p_cur FOR
+        SELECT r.ROUTE_ID, r.ROUTE_NAME, COUNT(tk.TICKET_ID) AS TOTAL_BOOKINGS
+        FROM ROUTE r
+        JOIN TRIP t ON r.ROUTE_ID = t.ROUTE_ID
+        LEFT JOIN TICKET tk ON t.TRIP_ID = tk.TRIP_ID
+        GROUP BY r.ROUTE_ID, r.ROUTE_NAME
+        ORDER BY TOTAL_BOOKINGS DESC, r.ROUTE_ID;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE_APPLICATION_ERROR(-20001, 'Popular routes report failed: ' || SQLERRM);
+END;
+
+
+
+-- Report 2: Revenue within a period
+CREATE OR REPLACE PROCEDURE sp_rpt_revenue (
+    p_from IN DATE, p_to IN DATE, p_cur OUT SYS_REFCURSOR
+) AS
+BEGIN
+    IF p_from > p_to THEN
+        RAISE_APPLICATION_ERROR(-20002, 'From date must be before To date.');
+    END IF;
+    OPEN p_cur FOR
+        SELECT TO_CHAR(PAYMENT_DATE,'YYYY-MM') AS PAYMENT_MONTH, PAYMENT_METHOD,
+               COUNT(PAYMENT_ID) AS TOTAL_TRANSACTIONS, SUM(AMOUNT) AS TOTAL_REVENUE
+        FROM PAYMENT
+        WHERE PAYMENT_STATUS = 'Paid' AND PAYMENT_DATE BETWEEN p_from AND p_to
+        GROUP BY TO_CHAR(PAYMENT_DATE,'YYYY-MM'), PAYMENT_METHOD
+        ORDER BY PAYMENT_MONTH DESC, PAYMENT_METHOD;
+END;
+
+
+-- Report 3: Passenger travel history (NULL = all passengers)
+CREATE OR REPLACE PROCEDURE sp_rpt_passenger_history (
+    p_passenger_id IN VARCHAR2, p_cur OUT SYS_REFCURSOR
+) AS
+    v_count NUMBER;
+BEGIN
+    IF p_passenger_id IS NOT NULL THEN
+        SELECT COUNT(*) INTO v_count FROM PASSENGER WHERE PASSENGER_ID = p_passenger_id;
+        IF v_count = 0 THEN
+            RAISE_APPLICATION_ERROR(-20003, 'Passenger ' || p_passenger_id || ' not found.');
+        END IF;
+    END IF;
+    OPEN p_cur FOR
+        SELECT p.PASSENGER_ID, p.FIRST_NAME || ' ' || p.LAST_NAME AS PASSENGER_NAME,
+               tk.TICKET_ID, r.ROUTE_NAME, t.TRIP_DATE, t.DEPARTURE_TIME,
+               tk.SEAT_NUMBER, tk.TICKET_PRICE, tk.STATUS AS TICKET_STATUS
+        FROM PASSENGER p
+        JOIN TICKET tk ON p.PASSENGER_ID = tk.PASSENGER_ID
+        JOIN TRIP t    ON tk.TRIP_ID = t.TRIP_ID
+        JOIN ROUTE r   ON t.ROUTE_ID = r.ROUTE_ID
+        WHERE p_passenger_id IS NULL OR p.PASSENGER_ID = p_passenger_id
+        ORDER BY t.TRIP_DATE DESC, tk.TICKET_ID;
+END;
+
+
+-- Report 4: Vehicles due for maintenance 
+CREATE OR REPLACE PROCEDURE sp_rpt_maintenance_due (
+    p_months IN NUMBER, p_cur OUT SYS_REFCURSOR
+) AS
+BEGIN
+    IF p_months IS NULL OR p_months < 1 THEN
+        RAISE_APPLICATION_ERROR(-20004, 'Months must be 1 or more.');
+    END IF;
+    OPEN p_cur FOR
+        SELECT v.VEHICLE_ID, v.VEHICLE_NUMBER, v.VEHICLE_TYPE, v.MODEL,
+               NVL(TO_CHAR(MAX(m.MAINTENANCE_DATE),'YYYY-MM-DD'),'No Maintenance Record') AS LAST_MAINTENANCE,
+               v.STATUS
+        FROM VEHICLE v
+        LEFT JOIN MAINTENANCE m ON v.VEHICLE_ID = m.VEHICLE_ID
+        GROUP BY v.VEHICLE_ID, v.VEHICLE_NUMBER, v.VEHICLE_TYPE, v.MODEL, v.STATUS
+        HAVING MAX(m.MAINTENANCE_DATE) IS NULL
+            OR MAX(m.MAINTENANCE_DATE) < ADD_MONTHS(SYSDATE, -p_months)
+        ORDER BY v.VEHICLE_ID;
+END;
+
+
+-- Report 5: Driver performance 
+CREATE OR REPLACE PROCEDURE sp_rpt_driver_performance (p_cur OUT SYS_REFCURSOR) AS
+BEGIN
+    OPEN p_cur FOR
+        SELECT d.DRIVER_ID, d.FIRST_NAME || ' ' || d.LAST_NAME AS DRIVER_NAME,
+               COUNT(DISTINCT t.TRIP_ID) AS TRIPS_COMPLETED,
+               NVL(ROUND(AVG(f.RATING), 2), 0) AS AVERAGE_RATING
+        FROM DRIVER d
+        JOIN TRIP t ON d.DRIVER_ID = t.DRIVER_ID AND t.STATUS = 'Completed'
+        LEFT JOIN FEEDBACK f ON t.TRIP_ID = f.TRIP_ID
+        GROUP BY d.DRIVER_ID, d.FIRST_NAME, d.LAST_NAME
+        ORDER BY AVERAGE_RATING DESC, TRIPS_COMPLETED DESC;
+END;
+
+
+
+
+
+
+
+
+
+
+
+VAR rc REFCURSOR
+EXEC sp_rpt_popular_routes(:rc)
+PRINT rc
+
+EXEC sp_rpt_revenue(DATE '2026-07-01', DATE '2026-09-30', :rc)
+PRINT rc
+
+EXEC sp_rpt_passenger_history('P007', :rc)
+PRINT rc
+
+EXEC sp_rpt_maintenance_due(3, :rc)
+PRINT rc
+
+EXEC sp_rpt_driver_performance(:rc)
+PRINT rc
+
+
+
+
+SELECT MAINTENANCE_ID, VEHICLE_ID, TO_CHAR(MAINTENANCE_DATE,'YYYY-MM-DD') AS MDATE, MAINTENANCE_TYPE, STATUS
+FROM MAINTENANCE ORDER BY VEHICLE_ID;
+
+
+
+
+VAR rc REFCURSOR
+EXEC sp_rpt_revenue(DATE '2026-12-01', DATE '2026-01-01', :rc)
+EXEC sp_rpt_passenger_history('P999', :rc)
+
+
+
+
+
+
+ALTER TABLE MAINTENANCE MODIFY DESCRIPTION VARCHAR2(100);
+
+INSERT INTO MAINTENANCE (MAINTENANCE_ID,VEHICLE_ID,MAINTENANCE_DATE,MAINTENANCE_TYPE,DESCRIPTION,COST,STATUS)
+VALUES ('M001','V001',DATE '2026-02-10','Service','Engine service',15000,'Completed');
+INSERT INTO MAINTENANCE (MAINTENANCE_ID,VEHICLE_ID,MAINTENANCE_DATE,MAINTENANCE_TYPE,DESCRIPTION,COST,STATUS)
+VALUES ('M005','V005',DATE '2026-05-19','Repair','Brake replacement',25000,'Completed');
+INSERT INTO MAINTENANCE (MAINTENANCE_ID,VEHICLE_ID,MAINTENANCE_DATE,MAINTENANCE_TYPE,DESCRIPTION,COST,STATUS)
+VALUES ('M006','V006',DATE '2026-08-20','Service','Full service',20000,'Completed');
+INSERT INTO MAINTENANCE (MAINTENANCE_ID,VEHICLE_ID,MAINTENANCE_DATE,MAINTENANCE_TYPE,DESCRIPTION,COST,STATUS)
+VALUES ('M008','V007',DATE '2026-09-05','Service','Oil change',9000,'Completed');
+
+UPDATE MAINTENANCE
+SET MAINTENANCE_DATE = DATE '2026-10-15', MAINTENANCE_TYPE = 'Service',
+    DESCRIPTION = 'Scheduled service', COST = 10000
+WHERE MAINTENANCE_ID = 'M007';
+
+COMMIT;
+
+CREATE OR REPLACE PROCEDURE sp_rpt_maintenance_due (
+    p_months IN NUMBER, p_cur OUT SYS_REFCURSOR
+) AS
+BEGIN
+    IF p_months IS NULL OR p_months < 1 THEN
+        RAISE_APPLICATION_ERROR(-20004, 'Months must be 1 or more.');
+    END IF;
+    OPEN p_cur FOR
+        SELECT v.VEHICLE_ID, v.VEHICLE_NUMBER, v.VEHICLE_TYPE, v.MODEL,
+               NVL(TO_CHAR(MAX(m.MAINTENANCE_DATE),'YYYY-MM-DD'),'No Maintenance Record') AS LAST_MAINTENANCE,
+               v.STATUS
+        FROM VEHICLE v
+        LEFT JOIN MAINTENANCE m ON v.VEHICLE_ID = m.VEHICLE_ID AND m.STATUS = 'Completed'
+        GROUP BY v.VEHICLE_ID, v.VEHICLE_NUMBER, v.VEHICLE_TYPE, v.MODEL, v.STATUS
+        HAVING MAX(m.MAINTENANCE_DATE) IS NULL
+            OR MAX(m.MAINTENANCE_DATE) < ADD_MONTHS(SYSDATE, -p_months)
+        ORDER BY v.VEHICLE_ID;
+END;
+
+
+
+
+
+
+VAR rc REFCURSOR
+EXEC sp_rpt_maintenance_due(3, :rc)
+PRINT rc

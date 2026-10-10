@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Login | SmartMove</title>
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="center">
+    <div class="card">
+      <div class="logo">🛠️</div>
+      <h2>Admin Login</h2>
+      <p class="sub">Manage vehicles, drivers, trips and reports</p>
+      <input id="u" placeholder="Username">
+      <input id="p" type="password" placeholder="Password">
+      <button class="btn btn-dark" onclick="login()">Login</button>
+      <div class="msg" id="msg"></div>
+      <div class="link"><a href="index.html">← Back to home</a></div>
+    </div>
+  </div>
+  <script>
+    async function login() {
+      const r = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: u.value, password: p.value })
+      });
+      const d = await r.json();
+      if (d.ok) location = d.redirect;
+      else msg.textContent = d.error;
+    }
+  </script>
+</body>
+</html>

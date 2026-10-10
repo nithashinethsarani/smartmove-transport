@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reports | SmartMove Admin</title>
+  
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="top">
+    <b>🛠️ SmartMove Admin</b>
+    <button onclick="logout()">Logout</button>
+  </div>
+  <div class="wrap">
+   <div class="nav">
+      <a href="/admin.html" class="on">Dashboard</a>
+      <a href="/admin-vehicles.html">Vehicles</a>
+      <a href="/admin-drivers.html">Drivers</a>
+      <a href="/admin-routes.html">Routes</a>
+      <a href="/admin-trips.html">Trips</a>
+      <a href="/admin-maintenance.html">Maintenance</a>
+      <a href="/admin-tickets.html">Tickets</a>
+      <a href="/admin-reports.html">Reports</a>
+      <a href="/admin-insights.html">Customer Insights</a>
+    </div>
+
+    <div class="panel">
+      <h2>Business Reports</h2>
+      <div class="row">
+        <select id="rep" onchange="showParams()">
+          <option value="popular-routes">1. Most frequently used routes</option>
+          <option value="revenue">2. Total revenue in a period</option>
+          <option value="passenger-history">3. Passenger travel history</option>
+          <option value="maintenance-due">4. Vehicles due for maintenance</option>
+          <option value="driver-performance">5. Driver performance</option>
+        </select>
+        <input id="pfrom" type="date" style="display:none" title="From date">
+        <input id="pto" type="date" style="display:none" title="To date">
+        <input id="ppass" placeholder="Passenger ID (empty = all)" style="display:none">
+        <input id="pmon" type="number" min="1" value="3" style="display:none" title="No service in the last N months">
+      </div>
+      <button class="btn btn-main btn-sm" onclick="runReport()">Run Report</button>
+      <div class="msg" id="msg"></div>
+    </div>
+
+    <div class="panel scroll">
+      <table>
+        <thead id="head"></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    async function logout() { await fetch('/api/logout', { method: 'POST' }); location = '/'; }
+
+    function showParams() {
+      const r = rep.value;
+      pfrom.style.display = pto.style.display = r === 'revenue' ? '' : 'none';
+      ppass.style.display = r === 'passenger-history' ? '' : 'none';
+      pmon.style.display = r === 'maintenance-due' ? '' : 'none';
+    }
+
+    async function runReport() {
+      const r = rep.value;
+      const q = new URLSearchParams();
+      if (r === 'revenue') { q.set('from', pfrom.value); q.set('to', pto.value); }
+      if (r === 'passenger-history') q.set('passenger', ppass.value);
+      if (r === 'maintenance-due') q.set('months', pmon.value);
+      const res = await fetch('/api/admin/reports/' + r + '?' + q.toString());
+      const d = await res.json();
+      head.innerHTML = rows.innerHTML = '';
+      if (!res.ok) { msg.className = 'msg'; msg.textContent = d.error; return; }
+      msg.className = 'msg ok';
+      msg.textContent = d.length + ' row(s)';
+      if (!d.length) return;
+      const cols = Object.keys(d[0]);
+      head.innerHTML = '<tr>' + cols.map(c => `<th>${esc(c.replace(/_/g, ' '))}</th>`).join('') + '</tr>';
+      rows.innerHTML = d.map(x => '<tr>' + cols.map(c => `<td>${esc(x[c])}</td>`).join('') + '</tr>').join('');
+    }
+
+    showParams();
+  </script>
+</body>
+</html>
